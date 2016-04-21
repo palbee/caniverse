@@ -11,7 +11,6 @@ class NetworkDefinition(models.Model):
     """Definition of one or more CAN bus networks in one file."""
     pass
 
-
 class Bus(models.Model):
     """A network transport system that transfers the data between several
     nodes."""
@@ -68,9 +67,24 @@ class Consumer(models.Model):
 class Value(models.Model):
     """Details of how the raw value of the signal/variable shall be
     interpreted."""
-    pass
+    TYPES = (('unsigned', 'unsigned'),
+             ('signed', 'signed'),
+             ('single', 'IEEE754 Single'),
+             ('double', 'IEEE754 Double')
+            )
 
-
+    type = models.CharField(help_text='Datatype of the value',
+                            choices=TYPES, default='unsigned', null=True)
+    slope = models.FloatField(default=1, help_text='The slope "m" of a linear equation y = mx + b.')
+    intercept = models.FloatField(default=0, help_text='The y-axis intercept "b" of a linear equation y = mx + b.')
+    unit = models.TextField(help_text='Physical unit of the value written as unit term as described in "The Unified'
+                                      ' Code for Units of Measure" (http://unitsofmeasure.org/ucum.html)')
+    min = models.FloatField(help_text='Lower validity limit of the interpreted value after using the'
+                                      ' slope/intercept equation.',
+                            default=0)
+    max = models.FloatField(help_text='Upper validity limit of the interpreted value after using the slope/intercept'
+                                      ' equation.',
+                            default=1)
 class Label(models.Model):
     """Descriptive name for a single value e.g. to describe an enumeration
     mark special, invalid or error values."""
@@ -98,7 +112,13 @@ class NodeRef(models.Model):
 class Document(models.Model):
     """Describes the scope of application e.g. the target vehicle or
     controlled device."""
-    pass
+    name = models.TextField(help_text='Describes the scope of application e.g. the target vehicle or controlled device.')
+    version = models.TextField(help_text='The version of the network definition document.')
+    author = models.TextField(help_text='The owner or author of the network definition document.')
+    company = models.TextField(help_text='The owner company of the network definition document.')
+    date = models.TextField(help_text='The release date of this version of the network definition document.')
+
+    network_definition = models.OneToOneField("NetworkDefinition", on_delete=models.CASCADE, related_name='document')
 
 
 class Var(models.Model):
