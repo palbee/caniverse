@@ -128,7 +128,16 @@ class Var(models.Model):
 
 
 class BasicLabelType(models.Model):
-    pass
+    LABEL_TYPES = (('value', 'value'),
+                   ('invalid', 'invalid'),
+                   ('error', 'error'))
+    name = models.TextField(null=False,
+                            help_text='Human-readable name for this value.')
+    label_type = models.CharField(max_length=7, default='value',
+                                  help_text='Type of value: "value", "invalid" or "error".')
+
+    class Meta:
+        abstract = True
 
 
 class BasicSignalType(models.Model):
