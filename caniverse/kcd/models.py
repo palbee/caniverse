@@ -74,8 +74,9 @@ class Value(models.Model):
              ('double', 'IEEE754 Double')
              )
 
-    type = models.CharField(help_text='Datatype of the value',
-                            choices=TYPES, default='unsigned', null=True)
+    type = models.CharField(max_length=8,
+                            choices=TYPES, default='unsigned', null=True,
+                            help_text='Datatype of the value')
     slope = models.FloatField(default=1, help_text='The slope "m" of a linear equation y = mx + b.')
     intercept = models.FloatField(default=0, help_text='The y-axis intercept "b" of a linear equation y = mx + b.')
     unit = models.TextField(help_text='Physical unit of the value written as unit term as described in "The Unified'
