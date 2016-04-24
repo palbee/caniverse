@@ -1,5 +1,5 @@
 from django.db import models
-
+from .validators import validate_bit_length
 """The models in this application are designed to be a faithful representation
 of the .kcd format from the Kayak tool. These models are based on the schema
 definition at
@@ -10,6 +10,7 @@ https://github.com/dschanoeh/Kayak/blob/master/Kayak-kcd/src/main/resources/com/
 class NetworkDefinition(models.Model):
     """Definition of one or more CAN bus networks in one file."""
     pass
+
 
 class Bus(models.Model):
     """A network transport system that transfers the data between several
@@ -51,7 +52,7 @@ class Signal(models.Model):
 class Notes(models.Model):
     """Describes the purpose of the signal/variable and/or comments on its
     usage."""
-    pass
+    note = models.TextField()
 
 
 class Producer(models.Model):
@@ -71,7 +72,7 @@ class Value(models.Model):
              ('signed', 'signed'),
              ('single', 'IEEE754 Single'),
              ('double', 'IEEE754 Double')
-            )
+             )
 
     type = models.CharField(help_text='Datatype of the value',
                             choices=TYPES, default='unsigned', null=True)
@@ -85,6 +86,8 @@ class Value(models.Model):
     max = models.FloatField(help_text='Upper validity limit of the interpreted value after using the slope/intercept'
                                       ' equation.',
                             default=1)
+
+
 class Label(models.Model):
     """Descriptive name for a single value e.g. to describe an enumeration
     mark special, invalid or error values."""
@@ -106,13 +109,14 @@ class Node(models.Model):
 class NodeRef(models.Model):
     """An endpoint connected to the network that is able to send messages to
     or receive messages from other endpoints."""
-    pass
+    node_id = models.TextField(help_text='Referencing a network node by its unique identifier.')
 
 
 class Document(models.Model):
     """Describes the scope of application e.g. the target vehicle or
     controlled device."""
-    name = models.TextField(help_text='Describes the scope of application e.g. the target vehicle or controlled device.')
+    name = models.TextField(
+        help_text='Describes the scope of application e.g. the target vehicle or controlled device.')
     version = models.TextField(help_text='The version of the network definition document.')
     author = models.TextField(help_text='The owner or author of the network definition document.')
     company = models.TextField(help_text='The owner company of the network definition document.')
@@ -141,4 +145,13 @@ class BasicLabelType(models.Model):
 
 
 class BasicSignalType(models.Model):
-    pass
+    ENDIANESS = (('little', 'little'),
+                 ('big', 'big'))
+    endianess = models.CharField(max_length=6, choices=ENDIANESS,
+                                 help_text='Determines if Byteorder is big-endian (Motorola), little-endian (Intel)'
+                                           ' otherwise.')
+    length = models.IntegerField(default=1,
+                                 validators=[validate_bit_length],
+                                 help_text='Bit length of the signal.')
+    name = models.TextField(blank=False,
+                            help_text='Human readable name of the signal.')
