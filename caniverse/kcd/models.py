@@ -1,5 +1,7 @@
 from django.db import models
-from .validators import validate_bit_length
+
+from .validators import validate_bit_length, check_baud
+
 """The models in this application are designed to be a faithful representation
 of the .kcd format from the Kayak tool. These models are based on the schema
 definition at
@@ -18,8 +20,10 @@ class NetworkDefinition(models.Model):
 class Bus(models.Model):
     """A network transport system that transfers the data between several
     nodes."""
-    pass
-
+    name = models.TextField(blank=False, unique=True)
+    baudrate = models.IntegerField(default=500000, validators=[check_baud])
+    network = models.ForeignKey('NetworkDefinition')
+    # messages - relation defined in Message object.
 
 class Message(models.Model):
     """A datagram that is used to transport payload data along the bus
