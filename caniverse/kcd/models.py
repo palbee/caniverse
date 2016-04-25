@@ -66,8 +66,7 @@ class Notes(models.Model):
 
 class Producer(models.Model):
     """Origin network node that is the sender of the assigned message."""
-    pass
-
+    message = models.ForeignKey('Message')
 
 class Consumer(models.Model):
     """Network node that is a user/receiver of the assigned signal."""
