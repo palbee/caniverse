@@ -111,7 +111,12 @@ class Node(models.Model):
     """An endpoint connected to the network (e.g. an electronic control unit)
     that is able to send messages to or receive messages from other
     endpoints."""
-    pass
+    # var -- defined via Var instances.
+    network = models.ForeignKey('NetworkDefinition')
+    node_id = models.TextField(blank=False,
+                               help_text='Unique identifier of the network node.')
+    name = models.TextField(null=True, blank=True, unique=True,
+                            help_text='Human-readable name of the network node (e.g. "Brake").')
 
 
 class NodeRef(models.Model):
