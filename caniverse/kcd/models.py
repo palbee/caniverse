@@ -9,6 +9,9 @@ https://github.com/dschanoeh/Kayak/blob/master/Kayak-kcd/src/main/resources/com/
 
 class NetworkDefinition(models.Model):
     """Definition of one or more CAN bus networks in one file."""
+    document = models.OneToOneField('Document', on_delete=models.CASCADE)
+    # nodes - relation defined in Node object.
+    # buses - relation defined in Bus object.
     pass
 
 
