@@ -28,7 +28,9 @@ class Bus(models.Model):
 class Message(models.Model):
     """A datagram that is used to transport payload data along the bus
     network."""
-    pass
+    notes = models.ManyToManyField('Notes')
+    bus = models.ForeignKey('Bus')
+
 
 
 class Multiplex(models.Model):
