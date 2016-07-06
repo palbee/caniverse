@@ -1,6 +1,8 @@
 from django.db import models
+from django.utils.translation import ugettext_lazy as _
+from django.core.validators import MinValueValidator
+from .validators import RangeValidator
 
-from .validators import validate_bit_length, check_baud
 
 """The models in this application are designed to be a faithful representation
 of the .kcd format from the Kayak tool. These models are based on the schema
@@ -11,7 +13,7 @@ https://github.com/dschanoeh/Kayak/blob/master/Kayak-kcd/src/main/resources/com/
 
 class NetworkDefinition(models.Model):
     """Definition of one or more CAN bus networks in one file."""
-    document = models.OneToOneField('Document', on_delete=models.CASCADE)
+    # document = models.OneToOneField('Document', on_delete=models.CASCADE)
     # nodes - relation defined in Node object.
     # buses - relation defined in Bus object.
     pass
@@ -21,7 +23,11 @@ class Bus(models.Model):
     """A network transport system that transfers the data between several
     nodes."""
     name = models.TextField(blank=False, unique=True)
-    baudrate = models.IntegerField(default=500000, validators=[check_baud])
+    baudrate = models.IntegerField(default=500000,
+                                   validators=[RangeValidator(5000, 1000000,
+                                                              message=_('Baud rate must be between %(lower)s and '
+                                                                        '%(upper)s. (it is %(value)s).'),
+                                                              code='baud_rate')])
     network = models.ForeignKey('NetworkDefinition')
     # messages - relation defined in Message object.
 
@@ -49,12 +55,6 @@ class LabelSet(models.Model):
     """A set of label and label groups. Each label describes the meaning of a
     single raw value by an alias name. A single value can only belong to a
     one label or label group."""
-    pass
-
-
-class Signal(models.Model):
-    """A discrete part of information contained in the payload of a
-    message."""
     pass
 
 
@@ -95,12 +95,6 @@ class Value(models.Model):
     max = models.FloatField(help_text='Upper validity limit of the interpreted value after using the slope/intercept'
                                       ' equation.',
                             default=1)
-
-
-class Label(models.Model):
-    """Descriptive name for a single value e.g. to describe an enumeration
-    mark special, invalid or error values."""
-    pass
 
 
 class LabelGroup(models.Model):
@@ -161,11 +155,34 @@ class BasicLabelType(models.Model):
 class BasicSignalType(models.Model):
     ENDIANESS = (('little', 'little'),
                  ('big', 'big'))
-    endianess = models.CharField(max_length=6, choices=ENDIANESS,
+    endianess = models.CharField(max_length=6,
+                                 choices=ENDIANESS,
+                                 default='little',
                                  help_text='Determines if Byteorder is big-endian (Motorola), little-endian (Intel)'
                                            ' otherwise.')
+
     length = models.IntegerField(default=1,
-                                 validators=[validate_bit_length],
+                                 validators=[RangeValidator(1, 64)],
                                  help_text='Bit length of the signal.')
     name = models.TextField(blank=False,
                             help_text='Human readable name of the signal.')
+    offset = models.IntegerField(blank=False,
+                                 validators=[RangeValidator(0, 63)],
+                                 help_text='Least significant bit offset of the signal relative to the least'
+                                           'significant bit of the messages data payload.')
+
+    class Meta:
+        abstract = True
+
+
+class Label(BasicLabelType):
+    """Descriptive name for a single value e.g. to describe an enumeration
+    mark special, invalid or error values."""
+    value = models.IntegerField(validators=[MinValueValidator(0, message=_('Must be non-negative, was %(value)s'))])
+    label_set = models.ForeignKey("LabelSet", on_delete=models.CASCADE)
+
+
+class Signal(BasicSignalType):
+    """A discrete part of information contained in the payload of a
+    message."""
+    pass
