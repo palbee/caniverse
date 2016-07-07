@@ -5,7 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 
 @deconstructible
 class RangeValidator(object):
-    """Derived from django.core.validators.BaseValidator"""
+    """Inspired by django.core.validators.BaseValidator"""
     message = _('Ensure this value is in the interval [%(lower)s, %(upper)s] (it is %(value)s).')
     code = 'out_of_range'
 
