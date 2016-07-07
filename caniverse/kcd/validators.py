@@ -10,8 +10,10 @@ class RangeValidator(object):
     code = 'out_of_range'
 
     def __init__(self, lower, upper, message=None, code=None):
-        self.lower = lower
-        self.upper = upper
+        if lower <= upper:
+            self.lower, self.upper = lower, upper
+        else:
+            self.lower, self.upper = upper, lower
 
         if message:
             self.message = message
