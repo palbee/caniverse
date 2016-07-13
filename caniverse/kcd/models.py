@@ -1,14 +1,14 @@
+"""The models in this application are designed to be a faithful representation
+of the .kcd format from the Kayak tool. These models are based on the schema
+definition at
+"https://github.com/dschanoeh/Kayak/blob/master/Kayak-kcd/src/main/resources/com/github/kayak/
+canio/kcd/loader/Definition.xsd"
+"""
+
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MinValueValidator
 from .validators import RangeValidator
-
-
-"""The models in this application are designed to be a faithful representation
-of the .kcd format from the Kayak tool. These models are based on the schema
-definition at
-https://github.com/dschanoeh/Kayak/blob/master/Kayak-kcd/src/main/resources/com/github/kayak/canio/kcd/loader/Definition.xsd
-"""
 
 
 class NetworkDefinition(models.Model):
@@ -25,18 +25,19 @@ class Bus(models.Model):
     name = models.TextField(blank=False, unique=True)
     baudrate = models.IntegerField(default=500000,
                                    validators=[RangeValidator(5000, 1000000,
-                                                              message=_('Baud rate must be between %(lower)s and '
-                                                                        '%(upper)s. (it is %(value)s).'),
+                                                              message=_('Baud rate must be between '
+                                                                        '%(lower)s and %(upper)s. ('
+                                                                        'it is %(value)s).'),
                                                               code='baud_rate')])
     network = models.ForeignKey('NetworkDefinition')
     # messages - relation defined in Message object.
+
 
 class Message(models.Model):
     """A datagram that is used to transport payload data along the bus
     network."""
     notes = models.ManyToManyField('Notes')
     bus = models.ForeignKey('Bus')
-
 
 
 class Multiplex(models.Model):
@@ -68,6 +69,7 @@ class Producer(models.Model):
     """Origin network node that is the sender of the assigned message."""
     message = models.ForeignKey('Message')
 
+
 class Consumer(models.Model):
     """Network node that is a user/receiver of the assigned signal."""
     pass
@@ -76,24 +78,27 @@ class Consumer(models.Model):
 class Value(models.Model):
     """Details of how the raw value of the signal/variable shall be
     interpreted."""
-    TYPES = (('unsigned', 'unsigned'),
-             ('signed', 'signed'),
-             ('single', 'IEEE754 Single'),
-             ('double', 'IEEE754 Double')
-             )
+    TYPES = (
+        ('unsigned', 'unsigned'),
+        ('signed', 'signed'),
+        ('single', 'IEEE754 Single'),
+        ('double', 'IEEE754 Double'))
 
     type = models.CharField(max_length=8,
                             choices=TYPES, default='unsigned', null=True,
                             help_text='Datatype of the value')
     slope = models.FloatField(default=1, help_text='The slope "m" of a linear equation y = mx + b.')
-    intercept = models.FloatField(default=0, help_text='The y-axis intercept "b" of a linear equation y = mx + b.')
-    unit = models.TextField(help_text='Physical unit of the value written as unit term as described in "The Unified'
-                                      ' Code for Units of Measure" (http://unitsofmeasure.org/ucum.html)')
-    min = models.FloatField(help_text='Lower validity limit of the interpreted value after using the'
-                                      ' slope/intercept equation.',
+    intercept = models.FloatField(default=0,
+                                  help_text='The y-axis intercept "b" of a linear equation y = mx +'
+                                            ' b.')
+    unit = models.TextField(help_text='Physical unit of the value written as unit term as described'
+                                      ' in "The Unified Code for Units of Measure" (http://unitsofm'
+                                      'easure.org/ucum.html)')
+    min = models.FloatField(help_text='Lower validity limit of the interpreted value after using th'
+                                      'e slope/intercept equation.',
                             default=0)
-    max = models.FloatField(help_text='Upper validity limit of the interpreted value after using the slope/intercept'
-                                      ' equation.',
+    max = models.FloatField(help_text='Upper validity limit of the interpreted value after using th'
+                                      'e slope/intercept equation.',
                             default=1)
 
 
@@ -123,14 +128,16 @@ class NodeRef(models.Model):
 class Document(models.Model):
     """Describes the scope of application e.g. the target vehicle or
     controlled device."""
-    name = models.TextField(
-        help_text='Describes the scope of application e.g. the target vehicle or controlled device.')
+    name = models.TextField(help_text='Describes the scope of application e.g. the target vehicle '
+                                      'or controlled device.')
     version = models.TextField(help_text='The version of the network definition document.')
     author = models.TextField(help_text='The owner or author of the network definition document.')
     company = models.TextField(help_text='The owner company of the network definition document.')
-    date = models.TextField(help_text='The release date of this version of the network definition document.')
+    date = models.TextField(
+        help_text='The release date of this version of the network definition document.')
 
-    network_definition = models.OneToOneField("NetworkDefinition", on_delete=models.CASCADE, related_name='document')
+    network_definition = models.OneToOneField("NetworkDefinition", on_delete=models.CASCADE,
+                                              related_name='document')
 
 
 class Var(models.Model):
@@ -158,8 +165,8 @@ class BasicSignalType(models.Model):
     endianess = models.CharField(max_length=6,
                                  choices=ENDIANESS,
                                  default='little',
-                                 help_text='Determines if Byteorder is big-endian (Motorola), little-endian (Intel)'
-                                           ' otherwise.')
+                                 help_text='Determines if Byteorder is big-endian (Motorola), '
+                                           'little-endian (Intel) otherwise.')
 
     length = models.IntegerField(default=1,
                                  validators=[RangeValidator(1, 64)],
@@ -168,8 +175,9 @@ class BasicSignalType(models.Model):
                             help_text='Human readable name of the signal.')
     offset = models.IntegerField(blank=False,
                                  validators=[RangeValidator(0, 63)],
-                                 help_text='Least significant bit offset of the signal relative to the least'
-                                           'significant bit of the messages data payload.')
+                                 help_text='Least significant bit offset of the signal relative to '
+                                           'the least significant bit of the messages data payload'
+                                           '.')
 
     class Meta:
         abstract = True
@@ -178,7 +186,8 @@ class BasicSignalType(models.Model):
 class Label(BasicLabelType):
     """Descriptive name for a single value e.g. to describe an enumeration
     mark special, invalid or error values."""
-    value = models.IntegerField(validators=[MinValueValidator(0, message=_('Must be non-negative, was %(value)s'))])
+    value = models.IntegerField(
+        validators=[MinValueValidator(0, message=_('Must be non-negative, was %(value)s'))])
     label_set = models.ForeignKey("LabelSet", on_delete=models.CASCADE)
 
 
