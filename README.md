@@ -40,7 +40,8 @@ This is part of the CANiverse project.
        python3 ./manage.py runserver
        ```
  9. Navigate to http://127.0.0.1:8000/admin
-10. Submit issues to https://github.com/palbee/caniverse/issues
+
+ 10. Submit issues to https://github.com/palbee/caniverse/issues
 
 ## References
 
