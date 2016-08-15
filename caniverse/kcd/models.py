@@ -31,9 +31,8 @@ class NetworkDefinition(models.Model):
                             help_text='The release date of this version of the network definition'
                                       ' document.')
 
-
     def __str__(self):
-        if len(name) != 0:
+        if len(self.name) != 0:
             return self.name
         else:
             return 'Network Definition {}'.format(self.id)
