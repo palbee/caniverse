@@ -1,11 +1,8 @@
 from django.contrib import admin
 
 from .models import NetworkDefinition, Bus, Message, Multiplex, MuxGroup, LabelSet, \
-    Value, LabelGroup, Node, NodeRef, Document, Var, Label, Signal
+    Value, LabelGroup, Node, NodeRef, Var, Label, Signal
 
-
-class DocumentAdmin(admin.ModelAdmin):
-    pass
 
 
 class NodeInline(admin.StackedInline):
@@ -109,7 +106,6 @@ class SignalAdmin(admin.ModelAdmin):
 
 
 admin.site.register(NetworkDefinition, NetworkDefinitionAdmin)
-admin.site.register(Document, DocumentAdmin)
 admin.site.register(Bus, BusAdmin)
 admin.site.register(Message, MessageAdmin)
 admin.site.register(Multiplex, MultiplexAdmin)
