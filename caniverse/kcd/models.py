@@ -109,6 +109,9 @@ class Notes(models.Model):
     note = models.TextField(help_text='"Describes the purpose of the signal/variable and/or '
                                       'comments on its usage.')
 
+    class Meta:
+        verbose_name_plural = 'Notes'
+
 
 class Producer(models.Model):
     """Origin network node that is the sender of the assigned message."""
