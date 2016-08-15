@@ -24,14 +24,17 @@ class Bus(models.Model):
     """A network transport system that transfers the data between several
     nodes."""
     # messages - relation defined in Message object.
-    name = models.TextField(blank=False)
+    name = models.TextField(blank=False,
+                            help_text='Human-readable name of the bus network (e.g. "Comfort").')
     baudrate = models.IntegerField(default=500000,
                                    validators=[RangeValidator(5000, 1000000,
                                                               message=_('Baud rate must be between '
                                                                         '%(lower)s and %(upper)s. ('
                                                                         'it is %(value)s).'),
-                                                              code='baud_rate')])
-    network = models.ForeignKey('NetworkDefinition')
+                                                              code='baud_rate')],
+                                   help_text='Nominal data transfer rate in baud (e.g. 500000, '
+                                             '125000, 100000 or 83333).')
+    network = models.ForeignKey('NetworkDefinition', on_delete=models.CASCADE)
 
     class Meta:
         verbose_name_plural = 'Buses'
@@ -40,22 +43,44 @@ class Bus(models.Model):
 class Message(models.Model):
     """A datagram that is used to transport payload data along the bus
     network."""
+    FRAME_FORMATS = [('standard', 'standard'), ('extenteded', 'exteneded')]
     note = models.OneToOneField('Notes', blank=True, null=True)
     # producer - relation defined in Producer field
     # multiplex - relation defined in Multiplex field
     # signal - relation defined in Signal field
-    message_id = models.TextField(validators=[RegexValidator(regex=r'0x[A-F0-9]+')])
-    bus = models.ForeignKey('Bus')
-    name = models.TextField(blank=False)
-    length = models.CharField(max_length=4, validators=[RegexValidator(regex='r([0-8])|(auto)')])
+    message_id = models.TextField(validators=[RegexValidator(regex=r'0x[A-F0-9]+')],
+                                  help_text='The unique identifier of the message. May have 11-bit '
+                                            '(Standard frame format) or 29-bit (Extended frame '
+                                            'format). The identifier is usually written in '
+                                            'hexadecimal format e.g. 0x123. If format is "extended"'
+                                            ' this identifier includes both Base ID (11 bits) and'
+                                            ' Extended ID (18 bits).')
+    bus = models.ForeignKey('Bus', on_delete=models.CASCADE)
+    name = models.TextField(blank=False,
+                            help_text='Human-readable name of the network message'
+                                      ' (e.g."OBD-Info").')
+    length = models.CharField(max_length=4,
+                              validators=[RegexValidator(regex='r([0-8])|(auto)')],
+                              help_text='Number of bytes available in the data field of the message'
+                                        ' (data length code). "auto" (default) calculate minimum '
+                                        'length for the contained signals in the message.')
     interval = models.PositiveIntegerField(default=0,
                                            validators=[RangeValidator(0, 60000,
-                                                                      code='interval')])
-    triggered = models.BooleanField(default=False)
-    count = models.PositiveIntegerField(default=0)
+                                                                      code='interval')],
+                                           help_text='Repetition interval of a cyclic network '
+                                                     'message in milliseconds.')
+    triggered = models.BooleanField(default=False,
+                                    help_text='Sending behavior of the network message. True, if '
+                                              'message is triggered by signal changes.')
+    count = models.PositiveIntegerField(default=0,
+                                        help_text='Number of repetitions of a triggered network '
+                                                  'message. 0 (default) for infinitee repetitions.')
     format = models.CharField(max_length=8, default='standard',
-                              validators=[RegexValidator(regex=r'(standard)|(extended)')])
-    remote = models.BooleanField(default=False)
+                              validators=[RegexValidator(regex=r'(standard)|(extended)')],
+                              help_text='Frame format of the network message.',
+                              choices=FRAME_FORMATS)
+    remote = models.BooleanField(default=False,
+                                 help_text='True, if message is a remote frame.')
 
 
 class MuxGroup(models.Model):
@@ -64,7 +89,9 @@ class MuxGroup(models.Model):
     multiplex = models.ForeignKey("Multiplex", on_delete=models.CASCADE)
 
     # signal - relation defined in Signal
-    count = models.PositiveIntegerField(validators=[MinValueValidator(0)])
+    count = models.PositiveIntegerField(validators=[MinValueValidator(0)],
+                                        help_text='Count value of the Multiplex when the signals of'
+                                                  ' this group become valid.')
 
 
 class LabelSet(models.Model):
@@ -73,12 +100,14 @@ class LabelSet(models.Model):
     one label or label group."""
     # label = Relation defined in Label
     # label_group = Relation defined in LabelGroup
+    pass
 
 
 class Notes(models.Model):
     """Describes the purpose of the signal/variable and/or comments on its
     usage."""
-    note = models.TextField()
+    note = models.TextField(help_text='"Describes the purpose of the signal/variable and/or '
+                                      'comments on its usage.')
 
 
 class Producer(models.Model):
@@ -104,7 +133,8 @@ class Value(models.Model):
 
     type = models.CharField(max_length=8,
                             choices=TYPES, default='unsigned', null=True,
-                            help_text='Datatype of the value',
+                            help_text='Datatype of the value e.g. "unsigned","signed" or IEE754 '
+                                      '"single", "double".',
                             validators=[RegexValidator(r'(unsigned)|(signed)|(single)|(double)')])
     slope = models.FloatField(default=1, help_text='The slope "m" of a linear equation y = mx + b.')
     intercept = models.FloatField(default=0,
@@ -126,7 +156,7 @@ class Node(models.Model):
     that is able to send messages to or receive messages from other
     endpoints."""
     # var -- defined via Var instances.
-    network = models.ForeignKey('NetworkDefinition')
+    network = models.ForeignKey('NetworkDefinition', on_delete=models.CASCADE)
     node_id = models.TextField(blank=False,
                                help_text='Unique identifier of the network node.')
     name = models.TextField(null=True, blank=True, unique=True,
@@ -137,9 +167,10 @@ class NodeRef(models.Model):
     """An endpoint connected to the network that is able to send messages to
     or receive messages from other endpoints."""
     node_id = models.TextField(help_text='Referencing a network node by its unique identifier.')
-    node_deref = models.OneToOneField('Node')
-    producer = models.ForeignKey('Producer')
-    consumer = models.ForeignKey('Consumer')
+    node_deref = models.OneToOneField('Node', help_text='Dereferencing a network node by its'
+                                                        ' unique identifier.')
+    producer = models.ForeignKey('Producer', on_delete=models.SET_NULL, null=True)
+    consumer = models.ForeignKey('Consumer', on_delete=models.SET_NULL, null=True)
 
 
 class Document(models.Model):
@@ -161,9 +192,9 @@ class Var(models.Model):
     """A variable, a symbolic name associated to a chunk of information (e.g.
     a string or a value)."""
     # values = models.ForeignKey('Value', on_delete=models.CASCADE)
-    notes = models.OneToOneField('Notes', null=True)
-    value = models.OneToOneField('Value')
-    name = models.TextField()
+    notes = models.OneToOneField('Notes', null=True, on_delete=models.SET_NULL)
+    value = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
+    name = models.TextField(help_text='Unique name of the variable.')
 
 
 class BasicLabelType(models.Model):
@@ -207,34 +238,37 @@ class Label(BasicLabelType):
     """Descriptive name for a single value e.g. to describe an enumeration
     mark special, invalid or error values."""
     value = models.IntegerField(
-        validators=[MinValueValidator(0, message=_('Must be non-negative, was %(value)s'))])
-    label_set = models.ForeignKey('LabelSet')
+        validators=[MinValueValidator(0, message=_('Must be non-negative, was %(value)s'))],
+        help_text='Signal raw value that is described here.'
+    )
+    label_set = models.ForeignKey('LabelSet', on_delete=models.CASCADE)
 
 
 class Signal(BasicSignalType):
     """A discrete part of information contained in the payload of a
     message."""
-    notes = models.ManyToManyField('Notes')
-    consumers = models.ManyToManyField('Consumer')
-    values = models.ManyToManyField('Value')
-    label_set = models.ManyToManyField('LabelSet')
-    message = models.ForeignKey('Signal')
-    muxgroup = models.ForeignKey('MuxGroup')
+    notes = models.OneToOneField('Notes', null=True, on_delete=models.SET_NULL)
+    consumers = models.OneToOneField('Consumer', null=True, on_delete=models.SET_NULL)
+    values = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
+    label_set = models.OneToOneField('LabelSet', null=True, on_delete=models.SET_NULL)
+    message = models.ForeignKey('Signal', on_delete=models.CASCADE)
+    muxgroup = models.ForeignKey('MuxGroup', on_delete=models.CASCADE)
 
 
 class Multiplex(BasicSignalType):
     """A looping counter to make a group of signals (MuxGroup) alternately
     active at a time."""
     # muxgroup - Defined in MuxGroup
-    notes = models.OneToOneField('Notes')
-    consumer = models.OneToOneField('Consumer')
-    value = models.OneToOneField('Value')
-    label_set = models.OneToOneField('LabelSet')
+    notes = models.OneToOneField('Notes', null=True, on_delete=models.SET_NULL)
+    consumer = models.OneToOneField('Consumer', null=True, on_delete=models.SET_NULL)
+    value = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
+    label_set = models.OneToOneField('LabelSet', null=True, on_delete=models.SET_NULL)
 
 
 class LabelGroup(BasicLabelType):
     """Descriptive name for a sequence of adjacent values."""
     label_set = models.ForeignKey("LabelSet", on_delete=models.CASCADE)
-    raw_from = models.PositiveIntegerField()
-    raw_to = models.PositiveIntegerField()
-    label_set = models.ForeignKey('LabelSet')
+    raw_from = models.PositiveIntegerField(help_text='Signal raw value the label group is starting '
+                                                     'with.')
+    raw_to = models.PositiveIntegerField(help_text='Signal raw value the label group is ending '
+                                                   'with.')
