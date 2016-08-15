@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .models import NetworkDefinition, Bus, Message, Multiplex, MuxGroup, LabelSet, \
-    Value, LabelGroup, Node, NodeRef, Var, Label, Signal
+    Value, LabelGroup, Node, Var, Label, Signal
 
 
 
@@ -114,7 +114,6 @@ admin.site.register(LabelSet, LabelSetAdmin)
 admin.site.register(Value, ValueAdmin)
 admin.site.register(LabelGroup, LabelGroupAdmin)
 admin.site.register(Node, NodeAdmin)
-admin.site.register(NodeRef, NodeRefAdmin)
 admin.site.register(Var, VarAdmin)
 admin.site.register(Label, LabelAdmin)
 admin.site.register(Signal, SignalAdmin)
