@@ -70,7 +70,7 @@ class Message(models.Model):
                                        'comments on its usage.')
     # multiplex - relation defined in Multiplex field
     # signal - relation defined in Signal field
-    producer = models.ManyToManyField('NodeRef')
+    producer = models.ManyToManyField('Node')
     message_id = models.TextField(validators=[RegexValidator(regex=r'0x[A-F0-9]+')],
                                   help_text='The unique identifier of the message. May have 11-bit '
                                             '(Standard frame format) or 29-bit (Extended frame '
@@ -170,16 +170,6 @@ class Node(models.Model):
                             help_text='Human-readable name of the network node (e.g. "Brake").')
 
 
-class NodeRef(models.Model):
-    """An endpoint connected to the network that is able to send messages to
-    or receive messages from other endpoints."""
-    node_ref = models.OneToOneField('Node', help_text='Referencing a network node by its'
-                                                      ' unique identifier.')
-
-    def node_id(self):
-        return self.node_deref.node_id
-
-
 
 class Var(models.Model):
     """A variable, a symbolic name associated to a chunk of information (e.g.
@@ -255,7 +245,7 @@ class Signal(BasicSignalType):
     notes = models.TextField(blank=True,
                              help_text='Describes the purpose of the signal/variable and/or '
                                        'comments on its usage.')
-    consumer = models.ManyToManyField('NodeRef')
+    consumer = models.ManyToManyField('Node')
     values = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
     label_set_label = models.ManyToManyField('Label')
     label_set_label_groups = models.ManyToManyField('LabelGroup')
@@ -270,7 +260,7 @@ class Multiplex(BasicSignalType):
     notes = models.TextField(blank=True,
                              help_text='Describes the purpose of the signal/variable and/or '
                                        'comments on its usage.')
-    consumer = models.ManyToManyField('NodeRef')
+    consumer = models.ManyToManyField('Node')
     value = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
     label_set_label = models.ManyToManyField('Label')
     label_set_label_groups = models.ManyToManyField('LabelGroup')
