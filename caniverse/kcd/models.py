@@ -5,9 +5,10 @@ definition at
 canio/kcd/loader/Definition.xsd"
 """
 
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from django.core.validators import MinValueValidator
+
 from .validators import RangeValidator
 
 
@@ -22,7 +23,8 @@ class NetworkDefinition(models.Model):
 class Bus(models.Model):
     """A network transport system that transfers the data between several
     nodes."""
-    name = models.TextField(blank=False, unique=True)
+    # messages - relation defined in Message object.
+    name = models.TextField(blank=False)
     baudrate = models.IntegerField(default=500000,
                                    validators=[RangeValidator(5000, 1000000,
                                                               message=_('Baud rate must be between '
@@ -30,33 +32,44 @@ class Bus(models.Model):
                                                                         'it is %(value)s).'),
                                                               code='baud_rate')])
     network = models.ForeignKey('NetworkDefinition')
-    # messages - relation defined in Message object.
 
 
 class Message(models.Model):
     """A datagram that is used to transport payload data along the bus
     network."""
-    notes = models.ManyToManyField('Notes')
+    note = models.OneToOneField('Notes', blank=True, null=True)
+    # producer - relation defined in Producer field
+    # multiplex - relation defined in Multiplex field
+    # signal - relation defined in Signal field
+    message_id = models.TextField(validators=[RegexValidator(regex=r'0x[A-F0-9]+')])
     bus = models.ForeignKey('Bus')
-
-
-class Multiplex(models.Model):
-    """A looping counter to make a group of signals (MuxGroup) alternately
-    active at a time."""
-    pass
+    name = models.TextField(blank=False)
+    length = models.CharField(max_length=4, validators=[RegexValidator(regex='r([0-8])|(auto)')])
+    interval = models.PositiveIntegerField(default=0,
+                                           validators=[RangeValidator(0, 60000,
+                                                                      code='interval')])
+    triggered = models.BooleanField(default=False)
+    count = models.PositiveIntegerField(default=0)
+    format = models.CharField(max_length=8, default='standard',
+                              validators=[RegexValidator(regex=r'(standard)|(extended)')])
+    remote = models.BooleanField(default=False)
 
 
 class MuxGroup(models.Model):
     """A group of signals that is just valid when the count value of the group
     matches with the looping counter (Multiplex)."""
-    pass
+    multiplex = models.ForeignKey("Multiplex", on_delete=models.CASCADE)
+
+    # signal - relation defined in Signal
+    count = models.PositiveIntegerField(validators=[MinValueValidator(0)])
 
 
 class LabelSet(models.Model):
     """A set of label and label groups. Each label describes the meaning of a
     single raw value by an alias name. A single value can only belong to a
     one label or label group."""
-    pass
+    # label = Relation defined in Label
+    # label_group = Relation defined in LabelGroup
 
 
 class Notes(models.Model):
@@ -67,12 +80,14 @@ class Notes(models.Model):
 
 class Producer(models.Model):
     """Origin network node that is the sender of the assigned message."""
+    # node_ref - relation defined in NodeRef
     message = models.ForeignKey('Message')
 
 
 class Consumer(models.Model):
     """Network node that is a user/receiver of the assigned signal."""
     pass
+    # node_ref - relation defined in NodeRef
 
 
 class Value(models.Model):
@@ -86,7 +101,8 @@ class Value(models.Model):
 
     type = models.CharField(max_length=8,
                             choices=TYPES, default='unsigned', null=True,
-                            help_text='Datatype of the value')
+                            help_text='Datatype of the value',
+                            validators=[RegexValidator(r'(unsigned)|(signed)|(single)|(double)')])
     slope = models.FloatField(default=1, help_text='The slope "m" of a linear equation y = mx + b.')
     intercept = models.FloatField(default=0,
                                   help_text='The y-axis intercept "b" of a linear equation y = mx +'
@@ -100,11 +116,6 @@ class Value(models.Model):
     max = models.FloatField(help_text='Upper validity limit of the interpreted value after using th'
                                       'e slope/intercept equation.',
                             default=1)
-
-
-class LabelGroup(models.Model):
-    """Descriptive name for a sequence of adjacent values."""
-    pass
 
 
 class Node(models.Model):
@@ -123,6 +134,9 @@ class NodeRef(models.Model):
     """An endpoint connected to the network that is able to send messages to
     or receive messages from other endpoints."""
     node_id = models.TextField(help_text='Referencing a network node by its unique identifier.')
+    node_deref = models.OneToOneField('Node')
+    producer = models.ForeignKey('Producer')
+    consumer = models.ForeignKey('Consumer')
 
 
 class Document(models.Model):
@@ -143,7 +157,10 @@ class Document(models.Model):
 class Var(models.Model):
     """A variable, a symbolic name associated to a chunk of information (e.g.
     a string or a value)."""
-    pass
+    # values = models.ForeignKey('Value', on_delete=models.CASCADE)
+    notes = models.OneToOneField('Notes', null=True)
+    value = models.OneToOneField('Value')
+    name = models.TextField()
 
 
 class BasicLabelType(models.Model):
@@ -188,10 +205,33 @@ class Label(BasicLabelType):
     mark special, invalid or error values."""
     value = models.IntegerField(
         validators=[MinValueValidator(0, message=_('Must be non-negative, was %(value)s'))])
-    label_set = models.ForeignKey("LabelSet", on_delete=models.CASCADE)
+    label_set = models.ForeignKey('LabelSet')
 
 
 class Signal(BasicSignalType):
     """A discrete part of information contained in the payload of a
     message."""
-    pass
+    notes = models.ManyToManyField('Notes')
+    consumers = models.ManyToManyField('Consumer')
+    values = models.ManyToManyField('Value')
+    label_set = models.ManyToManyField('LabelSet')
+    message = models.ForeignKey('Signal')
+    muxgroup = models.ForeignKey('MuxGroup')
+
+
+class Multiplex(BasicSignalType):
+    """A looping counter to make a group of signals (MuxGroup) alternately
+    active at a time."""
+    # muxgroup - Defined in MuxGroup
+    notes = models.OneToOneField('Notes')
+    consumer = models.OneToOneField('Consumer')
+    value = models.OneToOneField('Value')
+    label_set = models.OneToOneField('LabelSet')
+
+
+class LabelGroup(BasicLabelType):
+    """Descriptive name for a sequence of adjacent values."""
+    label_set = models.ForeignKey("LabelSet", on_delete=models.CASCADE)
+    raw_from = models.PositiveIntegerField()
+    raw_to = models.PositiveIntegerField()
+    label_set = models.ForeignKey('LabelSet')
