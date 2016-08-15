@@ -4,11 +4,11 @@ from .models import NetworkDefinition, Bus, Message, Multiplex, MuxGroup, LabelS
     Value, LabelGroup, Node, Var, Label, Signal
 
 
-
 class NodeInline(admin.StackedInline):
     model = Node
     classes = ['collapse']
     show_change_link = True
+    fields = ('name', 'node_id')
 
 
 class BusInline(admin.StackedInline):
@@ -19,6 +19,14 @@ class BusInline(admin.StackedInline):
 
 class NetworkDefinitionAdmin(admin.ModelAdmin):
     inlines = [NodeInline, BusInline]
+    fieldsets = (
+        ('Document',
+         {
+             'fields': ('name', 'version', 'author', 'company'),
+             'classes': ('collapse',),
+             'description': 'Network Metadata'
+         }),
+    )
 
 
 class MessageInline(admin.StackedInline):
@@ -37,17 +45,26 @@ class MultiplexInline(admin.StackedInline):
     show_change_link = True
 
 
+class ValueInline(admin.StackedInline):
+    model = Value
+    classes = ['collapse']
+    show_change_link = True
+    fields = ('type', 'slope', 'intercept', 'unit', 'min', 'max')
+
+
 class MessageAdmin(admin.ModelAdmin):
     inlines = [MultiplexInline]
 
 
 class MultiplexAdmin(admin.ModelAdmin):
-    pass
+    inlines = [ValueInline]
+
 
 class SignalInline(admin.StackedInline):
     model = Signal
     classes = ['collapse']
     show_change_link = True
+
 
 class MuxGroupAdmin(admin.ModelAdmin):
     inlines = [SignalInline]
@@ -59,16 +76,14 @@ class LabelGroupInline(admin.StackedInline):
     show_change_link = True
 
 
-
 class LabelInline(admin.StackedInline):
     model = Label
     classes = ['collapse']
     show_change_link = True
 
 
-
 class LabelSetAdmin(admin.ModelAdmin):
-    inlines=[LabelGroupInline, LabelInline]
+    inlines = [LabelGroupInline, LabelInline]
 
 
 class ValueAdmin(admin.ModelAdmin):
@@ -77,7 +92,6 @@ class ValueAdmin(admin.ModelAdmin):
 
 class LabelGroupAdmin(admin.ModelAdmin):
     pass
-
 
 
 class VarInline(admin.StackedInline):
@@ -102,7 +116,7 @@ class LabelAdmin(admin.ModelAdmin):
 
 
 class SignalAdmin(admin.ModelAdmin):
-    pass
+    inlines = [ValueInline]
 
 
 admin.site.register(NetworkDefinition, NetworkDefinitionAdmin)
