@@ -14,10 +14,16 @@ from .validators import RangeValidator
 
 class NetworkDefinition(models.Model):
     """Definition of one or more CAN bus networks in one file."""
-    # document = models.OneToOneField('Document', on_delete=models.CASCADE)
+    document = models.OneToOneField('Document')
+
     # nodes - relation defined in Node object.
     # buses - relation defined in Bus object.
-    pass
+
+    def __str__(self):
+        if hasattr(self, 'document') is not None:
+            return self.document.name
+        else:
+            return 'Network Definition {}'.format(self.id)
 
 
 class Bus(models.Model):
@@ -34,7 +40,10 @@ class Bus(models.Model):
                                                               code='baud_rate')],
                                    help_text='Nominal data transfer rate in baud (e.g. 500000, '
                                              '125000, 100000 or 83333).')
-    network = models.ForeignKey('NetworkDefinition', on_delete=models.CASCADE)
+    network_definition = models.ForeignKey('NetworkDefinition', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         verbose_name_plural = 'Buses'
@@ -44,10 +53,12 @@ class Message(models.Model):
     """A datagram that is used to transport payload data along the bus
     network."""
     FRAME_FORMATS = [('standard', 'standard'), ('extenteded', 'exteneded')]
-    note = models.OneToOneField('Notes', blank=True, null=True)
-    # producer - relation defined in Producer field
+    notes = models.TextField(blank=True,
+                             help_text='Describes the purpose of the signal/variable and/or '
+                                       'comments on its usage.')
     # multiplex - relation defined in Multiplex field
     # signal - relation defined in Signal field
+    producer = models.ManyToManyField('NodeRef')
     message_id = models.TextField(validators=[RegexValidator(regex=r'0x[A-F0-9]+')],
                                   help_text='The unique identifier of the message. May have 11-bit '
                                             '(Standard frame format) or 29-bit (Extended frame '
@@ -82,6 +93,9 @@ class Message(models.Model):
     remote = models.BooleanField(default=False,
                                  help_text='True, if message is a remote frame.')
 
+    def __str__(self):
+        return "{}({})".format(self.name, self.message_id)
+
 
 class MuxGroup(models.Model):
     """A group of signals that is just valid when the count value of the group
@@ -101,28 +115,6 @@ class LabelSet(models.Model):
     # label = Relation defined in Label
     # label_group = Relation defined in LabelGroup
     pass
-
-
-class Notes(models.Model):
-    """Describes the purpose of the signal/variable and/or comments on its
-    usage."""
-    note = models.TextField(help_text='"Describes the purpose of the signal/variable and/or '
-                                      'comments on its usage.')
-
-    class Meta:
-        verbose_name_plural = 'Notes'
-
-
-class Producer(models.Model):
-    """Origin network node that is the sender of the assigned message."""
-    # node_ref - relation defined in NodeRef
-    message = models.ForeignKey('Message')
-
-
-class Consumer(models.Model):
-    """Network node that is a user/receiver of the assigned signal."""
-    pass
-    # node_ref - relation defined in NodeRef
 
 
 class Value(models.Model):
@@ -169,35 +161,48 @@ class Node(models.Model):
 class NodeRef(models.Model):
     """An endpoint connected to the network that is able to send messages to
     or receive messages from other endpoints."""
-    node_id = models.TextField(help_text='Referencing a network node by its unique identifier.')
-    node_deref = models.OneToOneField('Node', help_text='Dereferencing a network node by its'
-                                                        ' unique identifier.')
-    producer = models.ForeignKey('Producer', on_delete=models.SET_NULL, null=True)
-    consumer = models.ForeignKey('Consumer', on_delete=models.SET_NULL, null=True)
+    node_ref = models.OneToOneField('Node', help_text='Referencing a network node by its'
+                                                      ' unique identifier.')
+
+    def node_id(self):
+        return self.node_deref.node_id
 
 
 class Document(models.Model):
     """Describes the scope of application e.g. the target vehicle or
     controlled device."""
-    name = models.TextField(help_text='Describes the scope of application e.g. the target vehicle '
+    name = models.TextField(blank=True,
+                            help_text='Describes the scope of application e.g. the target vehicle '
                                       'or controlled device.')
-    version = models.TextField(help_text='The version of the network definition document.')
-    author = models.TextField(help_text='The owner or author of the network definition document.')
-    company = models.TextField(help_text='The owner company of the network definition document.')
-    date = models.TextField(
-        help_text='The release date of this version of the network definition document.')
+    version = models.TextField(blank=True,
+                               help_text='The version of the network definition document.')
+    author = models.TextField(blank=True,
+                              help_text='The owner or author of the network definition document.')
+    company = models.TextField(blank=True,
+                               help_text='The owner company of the network definition document.')
+    date = models.TextField(blank=True,
+                            help_text='The release date of this version of the network definition'
+                                      ' document.')
 
-    network_definition = models.OneToOneField("NetworkDefinition", on_delete=models.CASCADE,
-                                              related_name='document')
+    def __str__(self):
+        if len(self.name) == 0:
+            return "Document {}".format(self.id)
+        else:
+            return self.name
 
 
 class Var(models.Model):
     """A variable, a symbolic name associated to a chunk of information (e.g.
     a string or a value)."""
-    # values = models.ForeignKey('Value', on_delete=models.CASCADE)
-    notes = models.OneToOneField('Notes', null=True, on_delete=models.SET_NULL)
+    node = models.ForeignKey('Node', on_delete=models.CASCADE)
+    notes = models.TextField(blank=True,
+                             help_text='Describes the purpose of the signal/variable and/or '
+                                       'comments on its usage.')
     value = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
     name = models.TextField(help_text='Unique name of the variable.')
+
+    def __str__(self):
+        return self.name
 
 
 class BasicLabelType(models.Model):
@@ -207,7 +212,11 @@ class BasicLabelType(models.Model):
     name = models.TextField(null=False,
                             help_text='Human-readable name for this value.')
     label_type = models.CharField(max_length=7, default='value',
+                                  choices=LABEL_TYPES,
                                   help_text='Type of value: "value", "invalid" or "error".')
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         abstract = True
@@ -233,6 +242,9 @@ class BasicSignalType(models.Model):
                                            'the least significant bit of the messages data payload'
                                            '.')
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         abstract = True
 
@@ -250,11 +262,14 @@ class Label(BasicLabelType):
 class Signal(BasicSignalType):
     """A discrete part of information contained in the payload of a
     message."""
-    notes = models.OneToOneField('Notes', null=True, on_delete=models.SET_NULL)
-    consumers = models.OneToOneField('Consumer', null=True, on_delete=models.SET_NULL)
+    notes = models.TextField(blank=True,
+                             help_text='Describes the purpose of the signal/variable and/or '
+                                       'comments on its usage.')
+    consumer = models.ManyToManyField('NodeRef')
     values = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
-    label_set = models.OneToOneField('LabelSet', null=True, on_delete=models.SET_NULL)
-    message = models.ForeignKey('Signal', on_delete=models.CASCADE)
+    label_set_label = models.ManyToManyField('Label')
+    label_set_label_groups = models.ManyToManyField('LabelGroup')
+    message = models.ForeignKey('Message', on_delete=models.CASCADE)
     muxgroup = models.ForeignKey('MuxGroup', on_delete=models.CASCADE)
 
 
@@ -262,10 +277,14 @@ class Multiplex(BasicSignalType):
     """A looping counter to make a group of signals (MuxGroup) alternately
     active at a time."""
     # muxgroup - Defined in MuxGroup
-    notes = models.OneToOneField('Notes', null=True, on_delete=models.SET_NULL)
-    consumer = models.OneToOneField('Consumer', null=True, on_delete=models.SET_NULL)
+    notes = models.TextField(blank=True,
+                             help_text='Describes the purpose of the signal/variable and/or '
+                                       'comments on its usage.')
+    consumer = models.ManyToManyField('NodeRef')
     value = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
-    label_set = models.OneToOneField('LabelSet', null=True, on_delete=models.SET_NULL)
+    label_set_label = models.ManyToManyField('Label')
+    label_set_label_groups = models.ManyToManyField('LabelGroup')
+    message = models.ForeignKey('Message', on_delete=models.CASCADE)
 
 
 class LabelGroup(BasicLabelType):
