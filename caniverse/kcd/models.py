@@ -14,14 +14,27 @@ from .validators import RangeValidator
 
 class NetworkDefinition(models.Model):
     """Definition of one or more CAN bus networks in one file."""
-    document = models.OneToOneField('Document')
 
     # nodes - relation defined in Node object.
     # buses - relation defined in Bus object.
 
+    name = models.TextField(blank=True,
+                            help_text='Describes the scope of application e.g. the target vehicle '
+                                      'or controlled device.')
+    version = models.TextField(blank=True,
+                               help_text='The version of the network definition document.')
+    author = models.TextField(blank=True,
+                              help_text='The owner or author of the network definition document.')
+    company = models.TextField(blank=True,
+                               help_text='The owner company of the network definition document.')
+    date = models.TextField(blank=True,
+                            help_text='The release date of this version of the network definition'
+                                      ' document.')
+
+
     def __str__(self):
-        if hasattr(self, 'document') is not None:
-            return self.document.name
+        if len(name) != 0:
+            return self.name
         else:
             return 'Network Definition {}'.format(self.id)
 
@@ -167,28 +180,6 @@ class NodeRef(models.Model):
     def node_id(self):
         return self.node_deref.node_id
 
-
-class Document(models.Model):
-    """Describes the scope of application e.g. the target vehicle or
-    controlled device."""
-    name = models.TextField(blank=True,
-                            help_text='Describes the scope of application e.g. the target vehicle '
-                                      'or controlled device.')
-    version = models.TextField(blank=True,
-                               help_text='The version of the network definition document.')
-    author = models.TextField(blank=True,
-                              help_text='The owner or author of the network definition document.')
-    company = models.TextField(blank=True,
-                               help_text='The owner company of the network definition document.')
-    date = models.TextField(blank=True,
-                            help_text='The release date of this version of the network definition'
-                                      ' document.')
-
-    def __str__(self):
-        if len(self.name) == 0:
-            return "Document {}".format(self.id)
-        else:
-            return self.name
 
 
 class Var(models.Model):
