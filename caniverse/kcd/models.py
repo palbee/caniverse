@@ -33,6 +33,9 @@ class Bus(models.Model):
                                                               code='baud_rate')])
     network = models.ForeignKey('NetworkDefinition')
 
+    class Meta:
+        verbose_name_plural = 'Buses'
+
 
 class Message(models.Model):
     """A datagram that is used to transport payload data along the bus
