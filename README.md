@@ -1,9 +1,14 @@
+
+# Read Me
+
+I'm hoping that people have had a chance to look at the first pass of caniverse. Please let me know what's good, bad, missing, or unneeded.
+
+
 # caniverse
 Not a shoe...
 
 
 This is part of the CANiverse project.
-
 
 
 
