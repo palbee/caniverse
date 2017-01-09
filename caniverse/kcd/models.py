@@ -38,7 +38,7 @@ class NetworkDefinition(models.Model):
                                       ' document.')
 
     def __str__(self):
-        if len(name) != 0:
+        if len(self.name) != 0:
             return self.name
         else:
             return 'Network Definition {}'.format(self.id)
@@ -76,7 +76,7 @@ class Message(models.Model):
                                        'comments on its usage.')
     # multiplex - relation defined in Multiplex field
     # signal - relation defined in Signal field
-    producer = models.ManyToManyField('NodeRef')
+    producer = models.ManyToManyField('Node')
     message_id = models.TextField(validators=[RegexValidator(regex=r'0x[A-F0-9]+')],
                                   help_text='The unique identifier of the message. May have 11-bit '
                                             '(Standard frame format) or 29-bit (Extended frame '
@@ -162,6 +162,8 @@ class Value(models.Model):
     max = models.FloatField(help_text='Upper validity limit of the interpreted value after using th'
                                       'e slope/intercept equation.',
                             default=1)
+    signal = models.OneToOneField('Signal', on_delete=models.CASCADE)
+    multiplex = models.OneToOneField('Multiplex', on_delete=models.CASCADE)
 
 
 class Node(models.Model):
@@ -174,16 +176,6 @@ class Node(models.Model):
                                help_text='Unique identifier of the network node.')
     name = models.TextField(null=True, blank=True, unique=True,
                             help_text='Human-readable name of the network node (e.g. "Brake").')
-
-
-class NodeRef(models.Model):
-    """An endpoint connected to the network that is able to send messages to
-    or receive messages from other endpoints."""
-    node_ref = models.OneToOneField('Node', help_text='Referencing a network node by its'
-                                                      ' unique identifier.')
-
-    def node_id(self):
-        return self.node_deref.node_id
 
 
 class Var(models.Model):
@@ -257,11 +249,11 @@ class Label(BasicLabelType):
 class Signal(BasicSignalType):
     """A discrete part of information contained in the payload of a
     message."""
+    # value - Defined in Value
     notes = models.TextField(blank=True,
                              help_text='Describes the purpose of the signal/variable and/or '
                                        'comments on its usage.')
-    consumer = models.ManyToManyField('NodeRef')
-    values = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
+    consumer = models.ManyToManyField('Node')
     label_set_label = models.ManyToManyField('Label')
     label_set_label_groups = models.ManyToManyField('LabelGroup')
     message = models.ForeignKey('Message', on_delete=models.CASCADE)
@@ -272,11 +264,11 @@ class Multiplex(BasicSignalType):
     """A looping counter to make a group of signals (MuxGroup) alternately
     active at a time."""
     # muxgroup - Defined in MuxGroup
+    # value - Defined in Value
     notes = models.TextField(blank=True,
                              help_text='Describes the purpose of the signal/variable and/or '
                                        'comments on its usage.')
-    consumer = models.ManyToManyField('NodeRef')
-    value = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
+    consumer = models.ManyToManyField('Node')
     label_set_label = models.ManyToManyField('Label')
     label_set_label_groups = models.ManyToManyField('LabelGroup')
     message = models.ForeignKey('Message', on_delete=models.CASCADE)
