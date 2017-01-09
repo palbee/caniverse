@@ -162,8 +162,8 @@ class Value(models.Model):
     max = models.FloatField(help_text='Upper validity limit of the interpreted value after using th'
                                       'e slope/intercept equation.',
                             default=1)
-    signal = models.OneToOneField('Signal', on_delete=models.CASCADE)
-    multiplex = models.OneToOneField('Multiplex', on_delete=models.CASCADE)
+    # signal = models.OneToOneField('Signal', on_delete=models.CASCADE)
+    # multiplex = models.OneToOneField('Multiplex', on_delete=models.CASCADE)
 
 
 class Node(models.Model):
@@ -249,11 +249,11 @@ class Label(BasicLabelType):
 class Signal(BasicSignalType):
     """A discrete part of information contained in the payload of a
     message."""
-    # value - Defined in Value
     notes = models.TextField(blank=True,
                              help_text='Describes the purpose of the signal/variable and/or '
                                        'comments on its usage.')
     consumer = models.ManyToManyField('Node')
+    values = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
     label_set_label = models.ManyToManyField('Label')
     label_set_label_groups = models.ManyToManyField('LabelGroup')
     message = models.ForeignKey('Message', on_delete=models.CASCADE)
@@ -269,6 +269,7 @@ class Multiplex(BasicSignalType):
                              help_text='Describes the purpose of the signal/variable and/or '
                                        'comments on its usage.')
     consumer = models.ManyToManyField('Node')
+    value = models.OneToOneField('Value', null=True, on_delete=models.SET_NULL)
     label_set_label = models.ManyToManyField('Label')
     label_set_label_groups = models.ManyToManyField('LabelGroup')
     message = models.ForeignKey('Message', on_delete=models.CASCADE)
