@@ -1,3 +1,9 @@
+
+# Read Me
+
+I'm hoping that people have had a chance to look at the first pass of caniverse. Please let me know what's good, bad, missing, or unneeded.
+
+Please take a look at the issues and let me know if you want to tackle one.
 # caniverse
 Not a shoe...
 
