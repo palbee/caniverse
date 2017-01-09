@@ -12,6 +12,12 @@ from django.utils.translation import ugettext_lazy as _
 from .validators import RangeValidator
 
 
+class Entry(models.Model):
+    """Entry in the system."""
+    network = models.OneToOneField('NetworkDefinition')
+    user = models.OneToOneField('auth.User')
+
+
 class NetworkDefinition(models.Model):
     """Definition of one or more CAN bus networks in one file."""
 
@@ -30,7 +36,6 @@ class NetworkDefinition(models.Model):
     date = models.TextField(blank=True,
                             help_text='The release date of this version of the network definition'
                                       ' document.')
-
 
     def __str__(self):
         if len(name) != 0:
@@ -179,7 +184,6 @@ class NodeRef(models.Model):
 
     def node_id(self):
         return self.node_deref.node_id
-
 
 
 class Var(models.Model):
